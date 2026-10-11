@@ -12,6 +12,7 @@ print("Semantic model loaded!\n")
 
 def split_sentences(text):
     """Text ko chotay sentences ya lines mein divide karta hai."""
+
     parts = re.split(r"(?<=[.!?])\s+|\n+", text)
 
     sentences = []
@@ -23,7 +24,6 @@ def split_sentences(text):
             sentences.append(part)
 
     return sentences
-
 
 
 def find_semantic_evidence(jd_text, cv_text):
@@ -45,7 +45,7 @@ def find_semantic_evidence(jd_text, cv_text):
 
     results = []
 
-    # Initial threshold: testing ke liye
+    # Initial threshold for testing
     threshold = 0.60
 
     for i, jd_sentence in enumerate(jd_sentences):
@@ -68,15 +68,19 @@ def find_semantic_evidence(jd_text, cv_text):
 
 
 if __name__ == "__main__":
+
     jd = "Experience developing REST APIs and backend services."
 
     cv = """
     Built server-side applications and integrated API endpoints.
+    Developed RESTful services using FastAPI and Python.
     Designed social media posts and managed marketing campaigns.
     """
 
-   
     evidence = find_semantic_evidence(jd, cv)
+
+    print("Evidence returned:", evidence)
+    print()
 
     for item in evidence:
         print("Requirement:", item["requirement"])
@@ -84,4 +88,3 @@ if __name__ == "__main__":
         print("Similarity:", item["similarity"])
         print("Status:", item["status"])
         print()
-
