@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JobFit - Rank candidates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fb; --card:#ffffff; --ink:#16213e; --muted:#5d6785; --line:#dde2f0;
+  --accent:#3b4fe0; --accent-ink:#ffffff; --good:#1f9d6b; --mid:#d98a1c; --low:#c8493f; --chip:#eaeefb;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#10142a;--card:#181d38;--ink:#eef1ff;--muted:#a3abcc;--line:#2b3159;--accent:#7b8cff;--accent-ink:#10142a;--chip:#232a52}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding:28px 16px 80px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:40px}
+.brand{font-weight:800;font-size:1.25rem;letter-spacing:-.02em}
+.demo{font-size:.85rem;color:var(--muted);display:flex;gap:6px;align-items:center}
+h1{font-size:clamp(1.6rem,4vw,2.2rem);letter-spacing:-.03em;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 22px}
+.composer{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;transition:border-color .15s}
+.composer.drag{border-color:var(--accent);border-style:dashed}
+.composer:focus-within{border-color:var(--accent)}
+textarea{width:100%;border:0;outline:0;resize:none;background:transparent;color:inherit;font:inherit;min-height:110px;max-height:320px;padding:6px}
+.files{display:flex;flex-wrap:wrap;gap:8px;padding:6px}
+.file{background:var(--chip);border-radius:999px;padding:4px 6px 4px 12px;font-size:.82rem;display:flex;align-items:center;gap:6px;max-width:100%}
+.file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.file button{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:2px 6px;border-radius:50%}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 4px 0}
+.left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.attach{border:1px solid var(--line);background:transparent;color:var(--ink);padding:8px 14px;border-radius:999px;font:inherit;font-size:.9rem;cursor:pointer}
+.attach:hover{border-color:var(--accent)}
+.top{font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.top select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font:inherit}
+.send{border:0;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;padding:10px 20px;border-radius:999px;cursor:pointer}
+.send:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.msg{margin-top:18px;padding:12px 14px;border-radius:12px;font-size:.92rem}
+.err{background:#fde9e7;color:#8a2a22}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .err{background:#3a1f26;color:#ffb3ab}}
+.results{margin-top:34px}
+.results h2{font-size:1.1rem;margin:0 0 12px}
+.row{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.head{display:flex;align-items:center;gap:12px}
+.rank{font-weight:800;color:var(--muted);min-width:28px}
+.name{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pct{font-weight:800;font-size:1.15rem}
+.meter{height:8px;background:var(--chip);border-radius:99px;margin:10px 0;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+.tags small{color:var(--muted);margin-right:2px}
+.tag{font-size:.78rem;padding:2px 10px;border-radius:99px;background:var(--chip)}
+.tag.ok{color:var(--good)}.tag.miss{color:var(--low)}
+.sum{font-size:.88rem;color:var(--muted);margin:8px 0 0}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">JobFit</div>
+    <label class="demo"><input type="checkbox" id="demo"> Demo mode (no backend)</label>
+  </header>
+
+  <h1>Who fits this job best?</h1>
+  <p class="sub">Paste the job description, attach candidate CVs, and get a ranked shortlist.</p>
+
+  <div class="composer" id="composer">
+    <label for="jd" class="sr" hidden>Job description</label>
+    <textarea id="jd" placeholder="Paste the job description here..."></textarea>
+    <div class="files" id="files"></div>
+    <div class="bar">
+      <div class="left">
+        <button class="attach" id="attach" type="button">Attach CVs</button>
+        <input type="file" id="picker" multiple accept=".pdf,.doc,.docx,.txt" hidden>
+        <label class="top">Show top
+          <select id="topn"><option>3</option><option selected>5</option><option>10</option><option value="0">all</option></select>
+        </label>
+      </div>
+      <button class="send" id="send" type="button" disabled>Rank candidates</button>
+    </div>
+  </div>
+
+  <div id="status"></div>
+  <section class="results" id="results" hidden>
+    <h2 id="rtitle"></h2>
+    <div id="list"></div>
+  </section>
+</div>
+
+<script>
+// ===== Backend config: change this to your backend URL =====
+const API_URL = "http://localhost:8000";
+// Expected: POST {API_URL}/api/rank  (multipart/form-data: jd, top_n, cvs[])
+// Response JSON: { results: [ { filename, score (0-100), matched_skills: [], missing_skills: [], summary } ] }
+
+const $ = id => document.getElementById(id);
+const jd = $("jd"), files = $("files"), send = $("send"), picker = $("picker");
+let cvs = [];
+
+function refresh(){
+  files.innerHTML = "";
+  cvs.forEach((f, i) => {
+    const d = document.createElement("div"); d.className = "file";
+    const s = document.createElement("span"); s.textContent = f.name; s.title = f.name;
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "\u00d7";
+    b.setAttribute("aria-label", "Remove " + f.name);
+    b.onclick = () => { cvs.splice(i, 1); refresh(); };
+    d.append(s, b); files.append(d);
+  });
+  send.disabled = !(jd.value.trim() && cvs.length);
+}
+function addFiles(list){
+  for (const f of list){
+    if (!cvs.some(c => c.name === f.name && c.size === f.size)) cvs.push(f);
+  }
+  refresh();
+}
+jd.addEventListener("input", () => {
+  jd.style.height = "auto"; jd.style.height = Math.min(jd.scrollHeight, 320) + "px"; refresh();
+});
+$("attach").onclick = () => picker.click();
+picker.onchange = () => { addFiles(picker.files); picker.value = ""; };
+
+const comp = $("composer");
+["dragenter","dragover"].forEach(e => comp.addEventListener(e, ev => { ev.preventDefault(); comp.classList.add("drag"); }));
+["dragleave","drop"].forEach(e => comp.addEventListener(e, ev => { ev.preventDefault(); comp.classList.remove("drag"); }));
+comp.addEventListener("drop", ev => addFiles(ev.dataTransfer.files));
+
+function mock(n){
+  const base = [
+    ["Ayesha_Khan_CV.pdf", 91, ["Python","Flask","SQL","Machine Learning"], ["Docker"], "Strong match on required skills, 3 years of relevant experience."],
+    ["Bilal_Ahmed_Resume.pdf", 78, ["Python","SQL"], ["Flask","Docker"], "Good Python and SQL base, missing web framework experience."],
+    ["Sana_Malik_CV.docx", 64, ["Python"], ["SQL","Flask","Machine Learning"], "Relevant background but few of the required skills."],
+    ["Usman_Tariq_CV.pdf", 41, ["SQL"], ["Python","Flask","Machine Learning"], "Mostly database work, limited overlap with this role."]
+  ];
+  const r = base.map(([filename, score, matched_skills, missing_skills, summary]) => ({filename, score, matched_skills, missing_skills, summary}));
+  return n ? r.slice(0, n) : r;
+}
+
+async function run(){
+  const n = parseInt($("topn").value, 10);
+  const st = $("status"); st.innerHTML = "";
+  send.disabled = true; send.innerHTML = '<span class="spin"></span>Ranking...';
+  try{
+    let results;
+    if ($("demo").checked){
+      await new Promise(r => setTimeout(r, 700)); results = mock(n);
+    } else {
+      const fd = new FormData();
+      fd.append("jd", jd.value.trim()); fd.append("top_n", n);
+      cvs.forEach(f => fd.append("cvs", f));
+      const res = await fetch(API_URL + "/api/rank", {method: "POST", body: fd});
+      if (!res.ok) throw new Error("Backend returned " + res.status);
+      results = (await res.json()).results;
+    }
+    show(results, n);
+  } catch(e){
+    const m = document.createElement("div"); m.className = "msg err";
+    m.textContent = "Could not reach the ranking service (" + e.message + "). Check that the backend is running at " + API_URL + ", or turn on Demo mode.";
+    st.append(m);
+  } finally {
+    send.textContent = "Rank candidates"; refresh();
+  }
+}
+send.onclick = run;
+
+function colorFor(s){ return s >= 75 ? "var(--good)" : s >= 50 ? "var(--mid)" : "var(--low)"; }
+function show(results, n){
+  const sorted = [...results].sort((a, b) => b.score - a.score);
+  const shown = n ? sorted.slice(0, n) : sorted;
+  $("rtitle").textContent = "Top " + shown.length + " of " + sorted.length + " candidates";
+  const list = $("list"); list.innerHTML = "";
+  shown.forEach((r, i) => {
+    const row = document.createElement("div"); row.className = "row";
+    const pct = Math.round(r.score);
+    const head = document.createElement("div"); head.className = "head";
+    const rk = document.createElement("div"); rk.className = "rank"; rk.textContent = "#" + (i + 1);
+    const nm = document.createElement("div"); nm.className = "name"; nm.textContent = r.filename; nm.title = r.filename;
+    const pc = document.createElement("div"); pc.className = "pct"; pc.textContent = pct + "%"; pc.style.color = colorFor(pct);
+    head.append(rk, nm, pc);
+    const meter = document.createElement("div"); meter.className = "meter";
+    meter.innerHTML = '<i style="width:' + pct + '%;background:' + colorFor(pct) + '"></i>';
+    row.append(head, meter);
+    [["Matched", r.matched_skills, "ok"], ["Missing", r.missing_skills, "miss"]].forEach(([label, arr, cls]) => {
+      if (!arr || !arr.length) return;
+      const t = document.createElement("div"); t.className = "tags";
+      const l = document.createElement("small"); l.textContent = label; t.append(l);
+      arr.forEach(s => { const x = document.createElement("span"); x.className = "tag " + cls; x.textContent = s; t.append(x); });
+      row.append(t);
+    });
+    if (r.summary){ const p = document.createElement("p"); p.className = "sum"; p.textContent = r.summary; row.append(p); }
+    list.append(row);
+  });
+  $("results").hidden = false;
+  $("results").scrollIntoView({behavior: "smooth", block: "start"});
+}
+refresh();
+</script>
+</body>
+</html>
